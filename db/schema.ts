@@ -1,0 +1,5 @@
+import {sqliteTable,text,integer,index} from 'drizzle-orm/sqlite-core';
+export const users=sqliteTable('users',{id:text('id').primaryKey(),displayName:text('display_name').notNull(),createdAt:text('created_at').notNull()});
+export const universes=sqliteTable('universes',{id:text('id').primaryKey(),userId:text('user_id'),guestHash:text('guest_hash'),answers:text('answers').notNull(),story:text('story').notNull(),source:text('source').notNull(),saved:integer('saved').notNull().default(0),shareToken:text('share_token').unique(),createdAt:text('created_at').notNull(),expiresAt:text('expires_at')},t=>[index('idx_universes_user_saved').on(t.userId,t.saved)]);
+export const branches=sqliteTable('branches',{id:text('id').primaryKey(),universeId:text('universe_id').notNull().references(()=>universes.id,{onDelete:'cascade'}).unique(),parentNodeId:text('parent_node_id').notNull(),choice:text('choice').notNull(),node:text('node').notNull(),createdAt:text('created_at').notNull()});
+export const limits=sqliteTable('generation_limits',{id:text('id').primaryKey(),count:integer('count').notNull()});

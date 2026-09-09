@@ -1,0 +1,2 @@
+import {db,json,pack,failure} from '@/lib/server';
+export async function GET(_r:Request,c:{params:Promise<{id:string}>}){try{const {id}=await c.params;const row=await db().prepare('SELECT * FROM universes WHERE share_token=? AND saved=1').bind(id).first();if(!row)return json({error:'This link is private, revoked, or no longer available.'},404);const u=await pack(row);return json({universe:{...u,id:'shared',shareToken:null},signedIn:false});}catch(e){return failure(e)}}

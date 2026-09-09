@@ -1,0 +1,3 @@
+import {getChatGPTUser} from '@/app/chatgpt-auth';
+import {db,json,failure} from '@/lib/server';
+export async function GET(){try{const u=await getChatGPTUser();if(!u)return json({signedIn:false,universes:[]});const {results}=await db().prepare('SELECT id,story,source,saved,share_token,created_at FROM universes WHERE user_id=? AND saved=1 ORDER BY created_at DESC LIMIT 100').bind(u.userId).all<any>();return json({signedIn:true,name:u.fullName||'Explorer',email:u.email,universes:results.map(r=>({id:r.id,title:JSON.parse(r.story).title,decision:JSON.parse(r.story).startingDecision,location:JSON.parse(r.story).location,shared:!!r.share_token,createdAt:r.created_at}))});}catch(e){return failure(e)}}
