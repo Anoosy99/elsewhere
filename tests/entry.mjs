@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {env,requestState,sql} from './platform.mjs';
+import * as generate from '../app/api/generate/route.ts';
+import * as universe from '../app/api/universes/[id]/route.ts';
+import * as share from '../app/api/share/[id]/route.ts';
+import * as profile from '../app/api/profile/route.ts';
+import {answersSchema,storySchema,demo,localStory,makeBranch} from '../lib/story.ts';
+const a={name:'Fictional Tester',age:'21–25',city:'Example City',field:'Design',interests:'Art, music, walking',desire:'Creative freedom',decision:'What if I became a photographer in Tokyo?',tone:'Bittersweet',intensity:'A major change'};
+let checks=0;function ok(condition,message){assert.ok(condition,message);checks++}
+async function call(handler,{method='GET',body,user,cookie=new Map(),id='unknown',origin='https://elsewhere.test'}={}){const headers={'Content-Type':'application/json',origin};if(user){headers['oai-authenticated-user-id']=user;headers['oai-authenticated-user-email']=user+'@example.test'}const req=new Request('https://elsewhere.test/api/test',{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});requestState(req,cookie);const r=await handler(req,{params:Promise.resolve({id})});return {status:r.status,data:await r.json()}}
+ok(storySchema.safeParse(demo).success,'Demo schema');
+for(const tone of ['Beautiful','Realistic','Chaotic','Bittersweet','Mysterious'])for(const intensity of ['Close to reality','A major change','Completely unexpected'])ok(storySchema.safeParse(localStory({...a,tone,intensity})).success,'Every local tone/intensity is valid');
+ok(!answersSchema.safeParse({...a,interests:'one,two'}).success,'Three interests enforced');ok(makeBranch(demo,0).narrative!==makeBranch(demo,1).narrative,'Branches differ');
+const guest=new Map();let r=await call(generate.POST,{method:'POST',body:a,cookie:guest});ok(r.status===201,'Guest generation works');const id=r.data.id;ok(guest.has('elsewhere_guest'),'Guest capability is set');
+r=await call(universe.GET,{id,cookie:guest});ok(r.status===200&&r.data.universe.story.nodes.length===5,'Guest can read own five-year universe');ok(!('answers' in r.data.universe),'Questionnaire not in explorer response');
+r=await call(universe.GET,{id});ok(r.status===404,'Anonymous cannot read private universe');
+r=await call(universe.GET,{id,user:'other'});ok(r.status===404,'Other account cannot read private universe');
+r=await call(generate.POST,{method:'POST',body:a,cookie:guest});ok(r.status===401,'Guest limited to one generation');
+r=await call(universe.POST,{id,cookie:guest,method:'POST',body:{action:'save'}});ok(r.status===401,'Save requires sign-in');
+r=await call(universe.POST,{id,cookie:guest,user:'owner',method:'POST',body:{action:'save'}});ok(r.status===200&&r.data.universe.saved,'Guest story can be claimed and saved');
+r=await call(universe.GET,{id,cookie:guest});ok(r.status===404,'Claim revokes guest access');
+r=await call(universe.POST,{id,user:'owner',method:'POST',body:{action:'branch',choice:0}});ok(r.status===200&&r.data.universe.branches.length===1,'Branch persists');
+r=await call(universe.POST,{id,user:'owner',method:'POST',body:{action:'branch',choice:1}});ok(r.status===200&&r.data.universe.branches.length===1&&r.data.universe.branches[0].choice.includes('Stay'),'Branch replacement preserves one-level MVP limit');
+r=await call(universe.POST,{id,user:'owner',method:'POST',body:{action:'share'}});ok(r.status===200&&!!r.data.universe.shareToken,'Opt-in share token created');const token=r.data.universe.shareToken;
+r=await call(share.GET,{id:token});ok(r.status===200&&!('answers' in r.data.universe)&&!r.data.universe.shareToken,'Shared response excludes answers and management token');
+r=await call(universe.POST,{id,user:'other',method:'POST',body:{action:'private'}});ok(r.status===404,'Nonowner cannot revoke sharing');
+r=await call(universe.POST,{id,user:'owner',method:'POST',body:{action:'private'}});ok(r.status===200,'Owner revokes sharing');
+r=await call(share.GET,{id:token});ok(r.status===404,'Old share token stops working');
+r=await call(universe.POST,{id,user:'owner',method:'POST',origin:'https://evil.test',body:{action:'share'}});ok(r.status!==200,'Cross-site mutation rejected');
+r=await call(profile.GET,{user:'owner'});ok(r.status===200&&r.data.universes.length===1,'Saved profile uses persistent records');
+r=await call(generate.POST,{method:'POST',body:{...a,decision:'What if I end my life?'},user:'safety-test'});ok(r.status===422&&r.data.safety,'Severe distress is diverted from entertainment');
+r=await call(generate.POST,{method:'POST',body:{...a,interests:'one'},user:'validation-test'});ok(r.status===400,'Invalid questionnaire rejected');
+r=await call(universe.DELETE,{id,user:'other',method:'DELETE'});ok(r.status===404,'Nonowner cannot delete');
+r=await call(universe.DELETE,{id,user:'owner',method:'DELETE'});ok(r.status===200,'Owner can delete');
+ok(sql.prepare('SELECT count(*) as n FROM branches').get().n===0,'Deletion removes branches');
+r=await call(universe.GET,{id,user:'owner'});ok(r.status===404,'Deleted universe cannot be read');
+console.log(`${checks} checks passed: story schemas, guest access, ownership, persistence, branching, sharing/revocation, safety, deletion.`);

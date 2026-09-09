@@ -1,0 +1,2 @@
+import {build} from 'esbuild';import {mkdir,rm} from 'node:fs/promises';import {pathToFileURL} from 'node:url';import {resolve} from 'node:path';
+const out=resolve('.sites-runtime/test-bundle.mjs');await mkdir('.sites-runtime',{recursive:true});await build({entryPoints:['tests/entry.mjs'],outfile:out,bundle:true,platform:'node',format:'esm',alias:{'cloudflare:workers':resolve('tests/platform.mjs'),'next/headers':resolve('tests/platform.mjs')},external:['node:*']});await import(pathToFileURL(out).href);await rm(out);

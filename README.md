@@ -1,126 +1,131 @@
-# vinext-starter
+# Elsewhere
 
-A clean full-stack starter running on [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and Drizzle support.
+**Explore the life you didn’t choose.**
 
-## Prerequisites
+Elsewhere is a cinematic, interactive alternate-life simulator: a dark personal observatory where choices become constellations and memories become artifacts. Every story is explicitly fictional, not a prediction or psychological assessment.
 
-- Node.js `>=22.13.0`
-- Portable: Windows, macOS, or Linux; no Bash required
-- Managed Linux: managed Linux runtime with Bash, `flock`, `curl`, `sha256sum`, and GNU `timeout`
-- Git is required only for publishing
+## Screenshots
 
-## Sites Lifecycle
+Screenshot placeholders: entry observatory, desktop constellation, mobile vertical timeline, and recovered-memory dialog. Run locally and capture these views after adding any final brand assets. No private stories are included in the repository.
 
-The Sites initializer copies the shared starter with the explicit `--execution-profile portable` or `--execution-profile managed-linux` argument from the plugin's setup instructions. It saves the selection only in ignored `.sites-runtime/execution-profile.json`. Both profiles copy/configure first, then use the plugin's separate `install-dependencies.mjs` step to measure installation independently. Edit source under `app/` and follow the Sites skill for installation, preview, builds, and publishing.
+## Features
 
-Whenever reopening or moving a checkout, follow the plugin's instructions to run `configure-execution-profile.mjs --execution-profile <portable|managed-linux>` before project commands. Profile changes do not alter tracked source or require reinstalling otherwise-valid dependencies; restart an existing preview to use the new selection. Do not commit or upload `.sites-runtime/`.
+- Interactive decision input and selectable starting prompts.
+- Four-step questionnaire: present life, decision, emotional tone, and divergence.
+- Five-year Tokyo photography demo, available without application sign-in.
+- Five interactive yearly nodes with desktop zoom/pan, keyboard controls, and a vertical mobile timeline.
+- Boarding-pass, message, journal, calendar, and note artifacts with accessible dialogs.
+- A turning point with two choices; one persistent additional branch per saved universe. Selecting the other choice replaces that branch. Demo branches are temporary.
+- Guest generation with a 24-hour HttpOnly capability cookie. A guest can create one temporary universe per cookie lifetime. Saved records live in D1, not browser storage.
+- ChatGPT identity via Sites dispatch-owned sign-in; owner checks on all private operations.
+- Saved universes, revocable read-only sharing links, and confirmed deletion.
+- Server-side OpenAI provider, validation, moderation, request timeouts, and a clearly labelled local-story fallback when no API key is configured.
+- Reduced-motion support, visible focus states, responsive forms, loading/error/empty states.
 
-This starter does not use `wrangler.jsonc`.
+## User flow and routes
 
-`install:ci` runs `npm ci` once against the shared lockfile, disables parent-workspace discovery, and includes required dev/optional dependencies despite production/omit settings. Sharp defaults to prebuilt binaries unless explicitly configured otherwise. Do not overlap installers.
+`/` → `/create` → `/universe/[id]` → save → `/profile`.
 
-- **Portable:** Preserve host HOME, npm cache, registry, proxy, temporary paths, retry/concurrency settings, and lifecycle-script policy. Use `--prefer-offline --no-audit --no-fund`.
-- **Managed Linux:** Use the existing project-local HOME/cache/tmp setup and Linux install lock, tarball preflight, and timeout. Restore the image-seeded npm cache only when its lockfile hash matches; retain network fallback. Builds keep their existing timeout. These helpers are not invoked by the portable profile.
+`/demo` explores the prepared Tokyo universe. Select year three for branching and any recovered memory to open its artifact. Year five reveals the closing reflection.
 
-`scripts/sites-env.mjs` preserves the caller's HOME, npm cache, proxy, XDG, and temporary-directory configuration while defaulting Wrangler and Miniflare state to the checkout. If npm reports an unwritable cache, select a writable path with `npm_config_cache` for that install. The `dev` and `start` scripts also keep Wrangler logs inside the checkout. Generated `.sites-runtime/` and `.wrangler/` directories are disposable and ignored by Git.
+`/share/[token]` is a read-only route. Sharing is opt-in, and disabling it invalidates the old token. The public URL parameter is a random share capability, never the internal universe ID.
 
-On portable, `npm run dev` uses `vinext dev` with HMR, starting at port 5173. Vinext records the running server in ignored `.vinext/` state, rejects an ordinary duplicate launch, and recovers stale state after a stopped process; exactly simultaneous starts can race. Pass `--port <port>` or `--hostname <host>` after `npm run dev --` when needed; keep portable previews on loopback.
+**Private deployment:** Sites owner-only access applies to every route, including the demo and share links. Application-level guest/public behavior is ready for a future public site, but publishing this build privately does not make links accessible to outsiders. Change the site audience separately only when intended.
 
-On managed Linux, use `sites-preview start` only for requested browser QA. The project's dev script runs Vite and accepts the supervisor's `--host 0.0.0.0 --port 4173 --strictPort` arguments. The internal browser uses `http://terminal.local:4173/`; it is not a user-facing URL. The supervisor owns the preview lifecycle. The ignored local profile survives the supervisor's cleared process environment.
+## Technology
 
-The portable profile simulates ChatGPT sign-in only for loopback development requests. Visit `/signin-with-chatgpt?return_to=/` to sign in as `local_seedy` (`seedy@sites.test`, display name `Seedy`) and `/signout-with-chatgpt?return_to=/` to sign out. The development cookie preserves that identity across server restarts. Mock auth is disabled in the managed-linux profile and is not included in production builds; hosted authentication remains dispatch-owned.
+React 19, TypeScript, Vinext, Vite, Cloudflare Workers, Sites D1, Drizzle schema/migrations, Zod, Tailwind and custom CSS, Radix/Shadcn primitives, and Lucide icons. The constellation uses SVG paths and positioned semantic buttons rather than a heavyweight graph library. No raster artwork or stock photography is required.
 
-The Worker uses `vinext/server/fetch-handler`, including Vinext's config-aware image handling. After building, `npm start` runs that Worker locally through Wrangler on `127.0.0.1`, sharing `.wrangler/state` with dev preview and local D1 migrations; it does not deploy the site or simulate sign-in. Use the URL printed by the server. Pass `npm start -- --port <port>` to select a different built-preview port.
+## Local development
 
-Local previews use Miniflare's placeholder `Request.cf` metadata without a network lookup. Set `CLOUDFLARE_CF_FETCH_ENABLED=true` to opt into fetching preview metadata; this setting does not change hosted request metadata.
-
-Local tool usage metrics are disabled by default. Set `WRANGLER_SEND_METRICS=true` to opt in.
-
-## Included Shape
-
-- edit site code under `app/`
-- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
-- `@cloudflare/workers-types` provides Worker types; `cloudflare-env.d.ts` declares optional `DB`/`BUCKET` bindings—update these declarations if binding names change
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Use it as the durable user key; use email and name for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive `oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty `name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by `oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use the returned `userId` as the stable user key for user-owned records; do not use email as a durable identifier.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send anonymous visitors through Sign in with ChatGPT.
-- In a Server Component, start sign-in with `<a href={chatGPTSignInPath(returnTo)} target="_top">`. The auth helper module is server-only; do not import it into a Client Component.
-- Do not use `fetch`, XHR, a client-side router, or a framework link that can prefetch the sign-in route. SIWC must start as a top-level navigation.
-- Never request the AuthAPI authorization endpoint directly. The dispatch-owned `/signin-with-chatgpt` route must start the SIWC flow.
-- Use `chatGPTSignOutPath(returnTo)` for browser sign-out links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the OAuth cookies, and identity header injection. Do not implement app routes for those reserved paths. Routes that do not import and call the helper remain anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the Sites hosting platform's access policy controls for workspace-wide restrictions, or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Local D1 migrations
-
-For a D1-backed local preview, generate SQL with `npm run db:generate`. Build once through the Sites skill's build entrypoint (or `npm run build` for standalone use) to generate `dist/server/wrangler.json`, rebuilding if bindings change. From the project root, apply each pending migration in order:
+Use Node 24 or newer (the integration tests use built-in `node:sqlite`).
 
 ```sh
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_example.sql
+npm ci
+npm run dev
 ```
 
-Replace the filename with the pending migration and `DB` with your D1 binding name if different. Use `.wrangler/state`, not `.wrangler/state/v3`; Wrangler adds the versioned directories. Do not replay migrations already applied locally. This updates only the preview database; publishing applies production migrations separately.
+The Sites checkout uses its managed execution profile. In Sites, use the provided dependency/build scripts and supervised preview; do not replace the starter configuration. Standalone local work may require configuring the logical D1 binding and applying the generated migrations to your local runtime. The production runtime obtains real resource bindings from Sites.
 
-## Diagnostic Commands
+```sh
+npx tsc --noEmit
+node scripts/test.mjs
+npm run build
+npm run db:generate
+```
 
-- `npm run install:ci`: perform the one locked dependency install
-- `npm run dev`: start the Vite/Vinext development server
-- `npm run build`: build the deployable Sites artifact
-- `npm run start`: preview the built Worker locally with D1/R2 support
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+The test script bundles real API handlers with a test-only platform adapter backed by in-memory SQLite. It does **not** add a production auth bypass. It validates 43 checks across schemas, guest access, ownership, saving, branches, sharing/revocation, safety, and deletion. It does not simulate the hosted ChatGPT sign-in redirect itself or make billable OpenAI requests.
 
-When using the Sites plugin, follow its skill instructions for installation, builds, and publishing. These npm commands remain available for standalone use.
+## Runtime environment
 
-The portable build runs Vinext directly without a host `timeout` command. The managed-linux build uses `scripts/build-verified.sh` and its existing `SITES_BUILD_TIMEOUT` setting.
+See `.env.example`. Never commit `.env` or API keys.
 
-## Learn More
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Optional server-side OpenAI secret. Add it through Sites runtime environment settings, never to frontend code. |
+| `OPENAI_MODEL` | Optional model override; default `gpt-4.1-mini`. Choose a model supporting JSON-object output. |
+| `DB` | Logical Sites D1 resource binding declared in `.openai/hosting.json`; not an API credential. |
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+Without a key, the provider uses personalized, deterministic templates and labels the universe **LOCAL STORY MODE**. This is a functional simulation, not AI generation. The local provider reflects all questionnaire fields and tone/divergence, but is less open-ended than the OpenAI provider. With a configured key, input and output pass OpenAI moderation. Provider failures are shown as recoverable errors rather than silently switching to templates. The browser keeps only the temporary questionnaire draft in session storage until successful generation.
+
+## Architecture
+
+- `app/page.tsx`, `app/create/page.tsx`: portal and focused creation flow.
+- `app/explorer.tsx`: constellation, chapter navigation, memory dialogs, branching, saving/sharing.
+- `app/profile/page.tsx`: saved records and deletion confirmation.
+- `app/api/**`: request validation, authentication, ownership and state changes.
+- `lib/story.ts`: Zod contracts, prepared demo, local generator, branch generator.
+- `lib/provider.ts`: server-only generation interface, safety checks and OpenAI requests.
+- `lib/server.ts`: prepared D1 queries, capability hashing, response shaping and origin checks.
+- `app/chatgpt-auth.ts`: supplied dispatch-owned ChatGPT authentication helpers.
+- `db/schema.ts`, `drizzle/**`: production schema and versioned migrations.
+- `tests/**`: test-only D1 and identity adapter; never routed or included in client bundles.
+
+## Data model
+
+| Table | Stored data |
+| --- | --- |
+| `users` | Site-scoped platform user ID, display name, creation time. |
+| `universes` | UUID, owner or guest capability hash, private questionnaire JSON, validated story aggregate JSON, provider, saved state, random sharing token, timestamps and temporary expiry. |
+| `branches` | Branch ID, parent universe and node, selected choice, validated chapter/artifact JSON, timestamp. Unique universe constraint implements the one-branch MVP. |
+| `generation_limits` | Per-identity hourly generation counter. |
+
+Timeline nodes and artifacts are stored within the validated story aggregate, keeping a five-year universe atomic. Branch relationships are separate records. `parentNodeId` and branch records permit later expansion; remove the per-universe uniqueness constraint through a new migration when supporting multiple branches. Queries use prepared statements and an owner/saved index.
+
+Unsaved universes are inaccessible after 24 hours; expiry is enforced on reads. Expired rows and old rate-limit buckets are not automatically physically purged in this MVP; add a scheduled retention job before a broad public launch. Saved deletion removes the universe, its questionnaire/story, branches, and sharing capability. User profile records remain.
+
+## AI contract
+
+`StoryProvider.generate(answers)` returns `{ story, source }`.
+
+The model returns a JSON object with title, introduction, startingDecision, location, role, lifestyle, people, exactly five ordered/distinct nodes, positive and difficult consequences, butterfly effect, unresolved mystery, reflection, question, turningPoint, and two branchOptions. Each node has id, year, title, location, age, mood, narrative, event, gain, sacrifice, and an artifact (`type`, `title`, `content`, `from`).
+
+JSON is parsed and validated by Zod before any storage or rendering. Generated strings are rendered as React text, never uncontrolled HTML. Branch continuations are deterministic in this MVP, including for OpenAI-generated universes; they follow the selected option but are not a second model request.
+
+## Security and privacy
+
+- Trust Sites identity headers only behind the Sites dispatcher. Do not expose the Worker directly without an equivalent trusted header-stripping gateway.
+- All owner operations enforce identity server-side. Guest capability cookies are random, HttpOnly, SameSite=Lax, Secure on HTTPS, and stored only as SHA-256 hashes in the database.
+- Saving a guest universe transfers it to the account and revokes guest access.
+- Cross-origin mutations are rejected; API responses use `Cache-Control: no-store`.
+- Share tokens use two random UUIDs, are opt-in and revocable, and only expose the story/branches. The questionnaire and owner identifiers are never returned from sharing endpoints or public metadata.
+- Narrative text can incorporate personal answers. The sharing dialog explicitly warns about this.
+- Sign-in starts with a top-level Sites `/signin-with-chatgpt` link. No passwords or custom auth stack.
+- Guest limits are per cookie, not robust anti-abuse enforcement across devices. Signed-in generation is capped at 10 requests per hour. Add stronger abuse controls and billing quotas before a public launch.
+- Local safety keyword screening is intentionally conservative and not comprehensive across languages. OpenAI mode additionally moderates both input and output. Distress references receive a supportive diversion instead of entertainment.
+- No user-provided secrets, questionnaire data, or generated private stories are committed.
+
+## Deployment and source control
+
+Canonical GitHub repository: `Anoosy99/elsewhere`, branch `main`. Source is additionally mirrored to the Sites-managed Git remote for version packaging. Meaningful milestones are committed; the final GitHub commit and Sites source commit must match.
+
+Preserve `.openai/hosting.json` and its project identity. Build with the Sites build helper, push the exact final revision to both repositories, package that revision, save a version and privately deploy it. Sites applies committed Drizzle migrations before the Worker is uploaded. Keep applied migration files immutable and append future migrations.
+
+## Roadmap
+
+- OpenAI-generated multi-level branches and longer timelines.
+- Export a digital story and dedicated social preview cards.
+- Automated retention and stronger guest abuse limits.
+- Richer local genre templates and translated safety handling.
+- Free/Plus entitlements, usage meters, then payment processing.
+- **Where We Met:** a future opt-in experience imagining the universe in which two users met. Not implemented in the MVP.
